@@ -10,19 +10,19 @@ public class SceneChanger : MonoBehaviour
 
     private void Start()
     {
-        // Butonun tıklama olayını dinle
+        
         myButton.onClick.AddListener(OnButtonClick);
     }
 
     private void OnButtonClick()
     {
-        // Butonun resmini değiştir
+        
         if (myButton != null && newButtonImage != null)
         {
             myButton.image.sprite = newButtonImage;
         }
 
-        // Sahneyi değiştir
+        
         SceneManager.LoadScene(nextSceneName);
     }
 }

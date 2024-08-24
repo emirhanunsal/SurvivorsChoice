@@ -1,7 +1,10 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
+
 
 public class CardManager : MonoBehaviour
 {
@@ -13,13 +16,16 @@ public class CardManager : MonoBehaviour
     [SerializeField] private TMP_Text descriptionText;
     [SerializeField] private TMP_Text leftOptionText;
     [SerializeField] private TMP_Text rightOptionText;
+    [SerializeField] private Swipe swipe;
 
+    public bool isGameEnd = false;
     private List<CardData> shuffledCardDataList;
     private int currentCardIndex = 0;
-
+    public bool canSwipe = true;
+    
     private void Start()
     {
-            // Kart verilerini başlat
+            
             cardDataList = new List<CardData>
             {
                 new CardData
@@ -2836,7 +2842,8 @@ public class CardManager : MonoBehaviour
                 UpdateCardData(shuffledCardDataList[currentCardIndex]);
             }
     }
-
+    
+    
     private void ShuffleCardDataList()
     {
         shuffledCardDataList = new List<CardData>(cardDataList);
@@ -2863,7 +2870,13 @@ public class CardManager : MonoBehaviour
         healthImage.fillAmount = Mathf.Clamp01(healthImage.fillAmount + cardData.healthRight / 100f);
         hungerImage.fillAmount = Mathf.Clamp01(hungerImage.fillAmount + cardData.hungerRight / 100f);
         moodImage.fillAmount = Mathf.Clamp01(moodImage.fillAmount + cardData.moodRight / 100f);
-        energyImage.fillAmount = Mathf.Clamp01(energyImage.fillAmount + cardData.energyRight / 100f);
+        energyImage.fillAmount = Mathf.Clamp01(energyImage.fillAmount + cardData.energyRight / 100);
+
+        if (healthImage.fillAmount <= 0 || hungerImage.fillAmount <= 0 || moodImage.fillAmount <= 0 ||
+            energyImage.fillAmount <= 0)
+        {
+            StartCoroutine(GameEnds());
+        }
     }
 
     public void ShowNextCard(bool leftSwipe)
@@ -2880,6 +2893,57 @@ public class CardManager : MonoBehaviour
         currentCardIndex = (currentCardIndex + 1) % shuffledCardDataList.Count;
         UpdateCardData(shuffledCardDataList[currentCardIndex]);
     }
+
+    private IEnumerator GameEnds()
+    {
+        isGameEnd = true;
+        Debug.Log("Coroutine started");
+        canSwipe = false; 
+
+        descriptionText.text = "";
+        leftOptionText.text = "";
+        rightOptionText.text = "";
+    
+        string gameOverMessage = "";
+
+        if (healthImage.fillAmount <= 0)
+        {
+            gameOverMessage = "You're dead, because of your injuries.";
+        }
+        else if (hungerImage.fillAmount <= 0)
+        {
+            gameOverMessage = "You're dead, because of hunger.";
+        }
+        else if (moodImage.fillAmount <= 0)
+        {
+            gameOverMessage = "You're dead, because you lost your mind.";
+        }
+        else if (energyImage.fillAmount <= 0)
+        {
+            gameOverMessage = "You're dead, because you lost all of your energy.";
+        }
+
+        
+        swipe.swipeFeedbackText.text = gameOverMessage;
+        swipe.swipeFeedbackText.CrossFadeAlpha(1, 1f, false); 
+        yield return new WaitForSeconds(3f); 
+
+        
+        descriptionText.text = "Click to Restart";
+        descriptionText.CrossFadeAlpha(1, 1f, false); 
+
+        
+        while (!Input.GetMouseButtonDown(0))
+        {
+            yield return null;
+        }
+
+        
+        SceneManager.LoadScene("StartPage");
+    }
+
+
+
 
     public CardData GetCurrentCardData()
     {

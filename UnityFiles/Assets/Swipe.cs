@@ -12,32 +12,37 @@ public class Swipe : MonoBehaviour
     [SerializeField] private float distance = 800f;
     [SerializeField] private Sprite pageSprite;
     [SerializeField] private CardManager cardManager;
-    [SerializeField] private TMP_Text swipeFeedbackText;
+    [SerializeField] public TMP_Text swipeFeedbackText;
+    [SerializeField] public TMP_Text dayCounterText; 
+    [SerializeField] private Aging Aging;
 
-    private int pageNumber = 0;
+    
+    
+    private int dayCounter = 0; 
     private Vector2 startTouchPosition;
     private Vector2 currentTouchPosition;
     private Vector2 endTouchPosition;
     private Vector2 defaultPosition;
     private Vector2 offscreenPosition;
     private bool isDragging = false;
-    private CardData previousCardData; // Önceki kartı tutmak için
+    private CardData previousCardData;
 
     void Start()
     {
         defaultPosition = pageImage.transform.localPosition;
         offscreenPosition = new Vector2(defaultPosition.x, defaultPosition.y - 800f);
         pageImage.transform.localPosition = offscreenPosition;
-        swipeFeedbackText.text = ""; // Başlangıçta swipe feedback boş
+        swipeFeedbackText.text = ""; 
+        dayCounterText.text = "Day: 0"; 
         UpdatePage();
     }
 
     void Update()
     {
-        if (Input.touchCount > 0)
+        if (Input.touchCount > 0 && cardManager.canSwipe && !cardManager.isGameEnd)
         {
             Touch touch = Input.GetTouch(0);
-
+        
             if (touch.phase == TouchPhase.Began)
             {
                 startTouchPosition = touch.position;
@@ -57,6 +62,7 @@ public class Swipe : MonoBehaviour
 
                 float screenWidth = Screen.width;
                 float threshold = screenWidth / 4;
+                cardManager.canSwipe = false;
 
                 if (endTouchPosition.x < screenWidth / 2 - threshold)
                 {
@@ -86,12 +92,14 @@ public class Swipe : MonoBehaviour
             elapsedTime += Time.deltaTime;
             yield return null;
         }
-
+        Aging.IncrementDayCounter();
         pageImage.transform.localPosition = endPosition;
-        previousCardData = cardManager.GetCurrentCardData(); // Mevcut kartı önceki kart olarak ayarla
+        previousCardData = cardManager.GetCurrentCardData(); 
         cardManager.ShowNextCard(leftSwipe: true);
         UpdatePage();
-        StartCoroutine(DisplaySwipeFeedback(true)); // Sol kaydırma sonucu göster
+        cardManager.canSwipe = true;
+        Debug.Log("Went to left");
+        StartCoroutine(DisplaySwipeFeedback(true)); 
     }
 
     private IEnumerator SlideOutAndNextPage()
@@ -106,23 +114,35 @@ public class Swipe : MonoBehaviour
             elapsedTime += Time.deltaTime;
             yield return null;
         }
-
+        Aging.IncrementDayCounter();
         pageImage.transform.localPosition = endPosition;
-        previousCardData = cardManager.GetCurrentCardData(); // Mevcut kartı önceki kart olarak ayarla
+        previousCardData = cardManager.GetCurrentCardData();
         cardManager.ShowNextCard(leftSwipe: false);
         UpdatePage();
-        StartCoroutine(DisplaySwipeFeedback(false)); // Sağ kaydırma sonucu göster
+        cardManager.canSwipe = true;
+        Debug.Log("Went to right");
+
+        StartCoroutine(DisplaySwipeFeedback(false)); 
     }
 
     private void UpdatePage()
     {
-        pageImage.sprite = pageSprite;
-        pageImage.transform.localPosition = defaultPosition;
-        StartCoroutine(SlideInPage());
+        if (!cardManager.isGameEnd)
+        {
+            pageImage.sprite = pageSprite;
+            pageImage.transform.localPosition = defaultPosition;
+            StartCoroutine(SlideInPage());
 
-        var cardData = cardManager.GetCurrentCardData();
-        cardManager.UpdateCardData(cardData);
+            var cardData = cardManager.GetCurrentCardData();
+            cardManager.UpdateCardData(cardData);
+
+            
+            dayCounter++;
+            dayCounterText.text = "Day: " + dayCounter.ToString();
+        }
+        
     }
+        
 
     private IEnumerator SlideInPage()
     {
@@ -154,11 +174,13 @@ public class Swipe : MonoBehaviour
         }
 
         pageImage.transform.localPosition = endPosition;
+        cardManager.canSwipe = true;
     }
 
     private IEnumerator DisplaySwipeFeedback(bool isLeftSwipe)
     {
-        if (previousCardData != null)
+        
+        if (previousCardData != null && !cardManager.isGameEnd)
         {
             if (isLeftSwipe)
             {
@@ -169,9 +191,10 @@ public class Swipe : MonoBehaviour
                 swipeFeedbackText.text = previousCardData.rightConclusion;
             }
 
-            swipeFeedbackText.CrossFadeAlpha(1, 1f, false); // Yavaşça göster
-            yield return new WaitForSeconds(3f); // 3 saniye bekle
-            swipeFeedbackText.CrossFadeAlpha(0, 1f, false); // Yavaşça kaybol
+            swipeFeedbackText.CrossFadeAlpha(1, 1f, false); 
+            yield return new WaitForSeconds(3f); 
+            swipeFeedbackText.CrossFadeAlpha(0, 1f, false); 
         }
     }
+
 }
